@@ -1,0 +1,14 @@
+diff --git a/ios/RNSoundPlayer.m b/ios/RNSoundPlayer.m
+index 77bf99b3151d609f40bd82031ca1d813221fac70..522e4db589b290980f40134aebf170a04d1b6948 100644
+--- a/ios/RNSoundPlayer.m
++++ b/ios/RNSoundPlayer.m
+@@ -169,7 +169,8 @@ - (void) mountSoundFile:(NSString *)name ofType:(NSString *)type {
+     [self.player setNumberOfLoops:self.loopCount];
+     [self.player prepareToPlay];
+     [[AVAudioSession sharedInstance]
+-     setCategory: AVAudioSessionCategoryPlayback
++     setCategory: AVAudioSessionCategoryAmbient
++     withOptions: AVAudioSessionCategoryOptionMixWithOthers
+      error: nil];
+     [self sendEventWithName:EVENT_FINISHED_LOADING body:@{@"success": [NSNumber numberWithBool:true]}];
+     [self sendEventWithName:EVENT_FINISHED_LOADING_FILE body:@{@"success": [NSNumber numberWithBool:true], @"name": name, @"type": type}];
