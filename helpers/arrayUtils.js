@@ -6,10 +6,10 @@ Array.prototype.except = function (arr) {
   return this.filter((value) => !arr.includes(value));
 };
 
-Array.prototype.toNumber = function () {
+Array.prototype.toNumber = function (offset = 0) {
   return this.map((value) => {
     if (Array.isArray(value)) return value.toNumber();
-    return Number(value);
+    return Number(value) + offset;
   });
 };
 
@@ -97,14 +97,28 @@ Array.prototype.transposeStrings = function () {
     .map((value) => value.join(""));
 };
 
-const combinations = (input, combinationLength, startPosition = 0, currentCombination = [], result = [], itemsToAdd = combinationLength) => {
+const combinations = (
+  input,
+  combinationLength,
+  startPosition = 0,
+  currentCombination = [],
+  result = [],
+  itemsToAdd = combinationLength
+) => {
   if (itemsToAdd === 0) {
     result.push(currentCombination);
     return;
   }
   for (let i = startPosition; i <= input.length - itemsToAdd; i++) {
     currentCombination[combinationLength - itemsToAdd] = input[i];
-    combinations(input, combinationLength, i + 1, currentCombination.slice(), result, itemsToAdd - 1);
+    combinations(
+      input,
+      combinationLength,
+      i + 1,
+      currentCombination.slice(),
+      result,
+      itemsToAdd - 1
+    );
   }
   return result;
 };
@@ -164,7 +178,9 @@ Array.prototype.permute = function (length = this.length) {
 };
 
 Array.prototype.unique = function (includeNonUniqueOnce = true) {
-  return this.filter((value, index) => (includeNonUniqueOnce ? this.indexOf(value) === index : this.count(value) === 1));
+  return this.filter((value, index) =>
+    includeNonUniqueOnce ? this.indexOf(value) === index : this.count(value) === 1
+  );
 };
 
 Array.prototype.nonUnique = function () {
