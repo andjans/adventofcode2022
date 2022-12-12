@@ -50,7 +50,11 @@ export class Grid {
     const [maxX, maxY] = points.maxValues();
     const [minX, minY] = points.minValues();
     const [offsetX, offsetY] = [minX < 0 ? minX * -1 : 0, minY < 0 ? minY * -1 : 0];
-    const grid = new Grid(Math.max(nColumns, maxX + offsetX + 1), Math.max(nRows, maxY + offsetY + 1), emptyType);
+    const grid = new Grid(
+      Math.max(nColumns, maxX + offsetX + 1),
+      Math.max(nRows, maxY + offsetY + 1),
+      emptyType
+    );
     points.forEach((point) => {
       if (point[3]) grid.pointAt(point[0] + offsetX, point[1] + offsetY).type = point[2];
       else grid.setPointAt(point[0] + offsetX, point[1] + offsetY, point[2]);
@@ -96,14 +100,20 @@ export class Grid {
    * Returns a new Grid with the given list of points removed
    */
   removeAll(points) {
-    return Grid.createFromArrayOfPoints(this._points.except(points).map((point) => [point.x, point.y, point.type, point instanceof EmptyPoint]));
+    return Grid.createFromArrayOfPoints(
+      this._points
+        .except(points)
+        .map((point) => [point.x, point.y, point.type, point instanceof EmptyPoint])
+    );
   }
 
   /**
    * Returns a new Grid with the given list of points set to empty points
    */
   clearAll(points) {
-    return Grid.createFromArrayOfPoints(this._points.map((point) => [point.x, point.y, undefined, points.includes(point)]));
+    return Grid.createFromArrayOfPoints(
+      this._points.map((point) => [point.x, point.y, undefined, points.includes(point)])
+    );
   }
 
   /**
@@ -152,7 +162,13 @@ export class Grid {
    *
    * Note that the steps must be a positive or negative number, they cannot be 0.
    */
-  filterByMultipleStep(stepX, stepY, [startX, startY] = [0, 0], [stopX, stopY] = [], includeStart = true) {
+  filterByMultipleStep(
+    stepX,
+    stepY,
+    [startX, startY] = [0, 0],
+    [stopX, stopY] = [],
+    includeStart = true
+  ) {
     if (stepX === 0 || stepY === 0) throw new Error("filterByMultipleStep: steps cannot be 0");
 
     const shouldContinueX = (x) => {
@@ -207,6 +223,15 @@ export class Grid {
     })[0];
   }
 
+  neighbours(point, includeDiagonal, includeSelf) {
+    return this._points[point.x][point.y]
+      .neighbours(includeDiagonal, includeSelf)
+      .filter(
+        (p) => p.x >= 0 && p.y >= 0 && p.x < this._points.length && p.y < this._points[p.x].length
+      )
+      .map((p) => this.pointAt(p.x, p.y));
+  }
+
   /**
    * Transposes the grid, example:
    * ["abcd", "efgh"] will become ["ea","fb","gc","hd"]
@@ -223,15 +248,26 @@ export class Grid {
     const subGrid = [];
     for (let x = point.x; x <= point2.x; x++) {
       for (let y = point.y; y <= point2.y; y++) {
-        subGrid.push([x - point.x, y - point.y, this._points[x][y].type, this._points[x][y] instanceof EmptyPoint]);
+        subGrid.push([
+          x - point.x,
+          y - point.y,
+          this._points[x][y].type,
+          this._points[x][y] instanceof EmptyPoint,
+        ]);
       }
     }
     return Grid.createFromArrayOfPoints(subGrid);
   }
 
   switch(point, point2) {
-    this._points[point.x][point.y] = point2 instanceof EmptyPoint ? new EmptyPoint(point.x, point.y, point2.type) : new Point(point.x, point.y, point2.type);
-    this._points[point2.x][point2.y] = point instanceof EmptyPoint ? new EmptyPoint(point2.x, point2.y, point.type) : new Point(point2.x, point2.y, point.type);
+    this._points[point.x][point.y] =
+      point2 instanceof EmptyPoint
+        ? new EmptyPoint(point.x, point.y, point2.type)
+        : new Point(point.x, point.y, point2.type);
+    this._points[point2.x][point2.y] =
+      point instanceof EmptyPoint
+        ? new EmptyPoint(point2.x, point2.y, point.type)
+        : new Point(point2.x, point2.y, point.type);
   }
 
   print(spacing = " ") {
@@ -241,6 +277,73 @@ export class Grid {
       .forEach((column) => {
         console.log(column.join(spacing));
       });
+  }
+
+  /**
+   * Get the closest path from the start point to any of the end points. The return value will be an object
+   * with the parameters `path` (array of all points along the closest path from start to finish), `end` (the end
+   * point that had the shortest path), and `cost` (the total cost/distance from the start to finish).
+   * The third argument is an options object that has the following optional properties:
+   * - getCost: a function to calculate the cost/distance between two points
+   * - checkIfPossible: a function to check if it is possible to go between two points
+   * - allowDiagonalSearch: true if it should be possible to traverse diagonally (default `false`)
+   */
+  findClosestPath(startPoint, endPoints, options = {}) {
+    const {
+      getCost = (a, b) => 1,
+      checkIfPossible = (a, b) => true,
+      allowDiagonalSearch = false,
+    } = options;
+    let currentPoint = { point: startPoint, cost: 0, parent: null };
+    const checkedPoints = {
+      [startPoint.xy]: currentPoint,
+    };
+    const visited = [];
+    const unvisited = this._points.flat().map((p) => p.xy);
+    const endPointsXY = endPoints.map((p) => p.xy);
+
+    // Loop until the end point has been selected as current point, meaning it has the lowest cost
+    // of the unvisited points. Then we know that the current point contains the shortest path.
+    while (!endPointsXY.includes(currentPoint.point.xy)) {
+      // Check cost to all neighbours to current point
+      this.neighbours(currentPoint.point, allowDiagonalSearch, false).forEach((point) => {
+        // Only check point if possible and not yet visited
+        if (checkIfPossible(currentPoint.point, point) && !visited.includes(point.xy)) {
+          const costToPoint = currentPoint.cost + getCost(currentPoint.point, point);
+          // If point has not yet been checked, or if the current cost is lower...
+          // ...then set the checked point to this point
+          if (!checkedPoints[point.xy] || costToPoint < checkedPoints[point.xy].cost) {
+            checkedPoints[point.xy] = { point, cost: costToPoint, parent: currentPoint.point.xy };
+          }
+        }
+      });
+      visited.push(currentPoint.point.xy);
+      unvisited.splice(unvisited.indexOf(currentPoint.point.xy), 1);
+
+      // Find the checked point, with the lowest cost, that has not yet been visited
+      // Set that point to be used as current point next iteration
+      currentPoint = unvisited.reduce(
+        (lowest, xy) =>
+          !lowest || (!!checkedPoints[xy] && checkedPoints[xy].cost < lowest.cost)
+            ? checkedPoints[xy]
+            : lowest,
+        null
+      );
+
+      if (!currentPoint) {
+        // In case no current point could be found, then there is no possible path between start and end
+        throw new Error("No path found");
+      }
+    }
+
+    // To get the exact path from start to end we have to backtrace from current point (end)
+    let pointOnPath = currentPoint;
+    const path = [currentPoint];
+    while (pointOnPath.point.xy !== startPoint.xy) {
+      path.push(checkedPoints[pointOnPath.parent]);
+      pointOnPath = checkedPoints[pointOnPath.parent];
+    }
+    return { path: path.reverse(), cost: currentPoint.cost, end: currentPoint.point };
   }
 
   toString() {
