@@ -46,30 +46,35 @@ export class Grid {
    *
    * Note that nColumns and nRows can be passed in if the grid should be larger than max of the supplied points.
    */
-  static createFromArrayOfPoints(points, emptyType, nColumns = 0, nRows = 0) {
+  static createFromArrayOfPoints(points, emptyType = " ", nColumns = 0, nRows = 0) {
     const [maxX, maxY] = points.maxValues();
     const [minX, minY] = points.minValues();
     const [offsetX, offsetY] = [minX < 0 ? minX * -1 : 0, minY < 0 ? minY * -1 : 0];
     const grid = new Grid(
       Math.max(nColumns, maxX + offsetX + 1),
       Math.max(nRows, maxY + offsetY + 1),
-      emptyType
+      emptyType,
+      offsetX,
+      offsetY
     );
     points.forEach((point) => {
-      if (point[3]) grid.pointAt(point[0] + offsetX, point[1] + offsetY).type = point[2];
-      else grid.setPointAt(point[0] + offsetX, point[1] + offsetY, point[2]);
+      if (point[3]) grid.pointAt(point[0], point[1]).type = point[2];
+      else grid.setPointAt(point[0], point[1], point[2]);
     });
     return grid;
   }
 
-  constructor(nColumns, nRows, emptyType) {
+  constructor(nColumns, nRows, emptyType = " ", offsetX = 0, offsetY = 0) {
     this._points = [];
     for (let column = 0; column < nColumns; column++) {
       this._points.push([]);
       for (let row = 0; row < nRows; row++) {
-        this._points[column].push(new EmptyPoint(column, row, emptyType));
+        this._points[column].push(new EmptyPoint(column - offsetX, row - offsetY, emptyType));
       }
     }
+    this._emptyType = emptyType;
+    this._offsetX = offsetX;
+    this._offsetY = offsetY;
   }
 
   get nColumns() {
@@ -80,40 +85,54 @@ export class Grid {
     return this._points[0].length;
   }
 
+  get emptyType() {
+    return this._emptyType;
+  }
+
+  get offsetX() {
+    return this._offsetX;
+  }
+
+  get offsetY() {
+    return this._offsetY;
+  }
+
   get nTotalPoints() {
     return this.nColumns * this.nRows;
   }
 
   pointAt(x, y) {
-    return this._points[x][y];
+    return this._points[x + this._offsetX][y + this._offsetY];
   }
 
   allPointsX(x) {
-    return this._points[x];
+    return this._points[x + this._offsetX];
   }
 
   allPointsY(y) {
-    return this._points.transpose()[y];
+    return this._points.transpose()[y + this._offsetY];
   }
 
   /**
-   * Returns a new Grid with the given list of points removed
+   * Returns a new Grid with the given list of points removed.
+   * Note that if the specified points are not covering a whole
+   * row or column, they will be turned into EmptyPoints.
    */
   removeAll(points) {
     return Grid.createFromArrayOfPoints(
       this._points
+        .flat()
         .except(points)
-        .map((point) => [point.x, point.y, point.type, point instanceof EmptyPoint])
+        .map((point) => [point.x, point.y, point.type, point instanceof EmptyPoint]),
+      this._emptyType
     );
   }
 
   /**
-   * Returns a new Grid with the given list of points set to empty points
+   * Returns a copy of this grid
    */
-  clearAll(points) {
-    return Grid.createFromArrayOfPoints(
-      this._points.map((point) => [point.x, point.y, undefined, points.includes(point)])
-    );
+  copy() {
+    return this.removeAll([]);
   }
 
   /**
@@ -198,8 +217,17 @@ export class Grid {
     return filteredPoints;
   }
 
+  // TODO Remove row & remove column
+
+  // TODO Flip and mirror
+
   setPointAt(x, y, type) {
-    this._points[x][y] = new Point(x, y, type);
+    if (
+      this._points[x + this._offsetX] !== undefined &&
+      this._points[x + this._offsetX][y + this._offsetY] !== undefined
+    ) {
+      this._points[x + this._offsetX][y + this._offsetY] = new Point(x, y, type);
+    }
   }
 
   getAllWithType(type) {
@@ -241,22 +269,26 @@ export class Grid {
   }
 
   /**
-   * Creates a sub-grid from the given points. Note that point2 can be omitted, it will then be [maxX, maxY].
+   * Creates a sub-grid from the given points. Note that toPoint can be omitted, it will then be [maxX, maxY].
    */
-  toSubGrid(point, point2) {
-    if (!point2) point2 = this._points[this._points.length - 1][this._points[0].length - 1];
+  toSubGrid(fromPoint, toPoint) {
+    const [maxX, maxY] = toPoint
+      ? [toPoint.x + this._offsetX, toPoint.y + this._offsetY]
+      : [this._points.length - 1, this._points[0].length - 1];
+    const [minX, minY] = [fromPoint.x + this._offsetX, fromPoint.y + this._offsetY];
+
     const subGrid = [];
-    for (let x = point.x; x <= point2.x; x++) {
-      for (let y = point.y; y <= point2.y; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         subGrid.push([
-          x - point.x,
-          y - point.y,
+          fromPoint.x + (x - minX),
+          fromPoint.y + (y - minY),
           this._points[x][y].type,
           this._points[x][y] instanceof EmptyPoint,
         ]);
       }
     }
-    return Grid.createFromArrayOfPoints(subGrid);
+    return Grid.createFromArrayOfPoints(subGrid, this.emptyType);
   }
 
   switch(point, point2) {
@@ -271,12 +303,15 @@ export class Grid {
   }
 
   print(spacing = " ") {
+    //maxY
     this._points
       .transpose()
       .reverse()
       .forEach((column) => {
         console.log(column.join(spacing));
       });
+    //minY
+    //minX maxX
   }
 
   /**
