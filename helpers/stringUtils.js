@@ -38,6 +38,14 @@ String.prototype.hexToNumber = function () {
   return parseInt(this, 16);
 };
 
+/**
+ * Get all numbers in the string as an array
+ */
+String.prototype.getNumbers = function () {
+  // eslint-disable-next-line unicorn/no-unsafe-regex
+  return this.match(/[+-]?\d+(\.\d+)?/g);
+};
+
 export const lowercaseLetters = [...new Array(26)].map((e, i) => String.fromCharCode(i + 97));
 export const uppercaseLetters = [...new Array(26)].map((e, i) => String.fromCharCode(i + 65));
 
