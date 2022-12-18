@@ -17,8 +17,14 @@ const steps = [
 const task1 = () => {
   const grid = Grid.createFromArrayOfArrays(lines.splitEachElementBy("").toNumber());
   const visibleInner = grid
-    .filterByMultipleStep(1, 1, [1, 1], [grid.nColumns - 2, grid.nRows - 2])
-    .filter((point) => steps.some((step) => grid.filterByStep(step[0], step[1], point.x, point.y, false).every((p) => p.type < point.type)));
+    .filterInArea(1, 1, [1, 1], [grid.nColumns - 2, grid.nRows - 2])
+    .filter((point) =>
+      steps.some((step) =>
+        grid
+          .filterOnLine(step[0], step[1], point.x, point.y, false)
+          .every((p) => p.type < point.type)
+      )
+    );
   console.log(visibleInner.length + grid.nColumns * 2 + (grid.nRows - 2) * 2);
 };
 
@@ -30,10 +36,18 @@ const task1_old = () => {
 
   const visible = subGrid.getAllNonEmpty().filter((point) => {
     return (
-      grid.allPointsX(point.x + 1).every((pointX) => pointX.y >= point.y + 1 || Number(pointX.type) < Number(point.type)) ||
-      grid.allPointsX(point.x + 1).every((pointX) => pointX.y <= point.y + 1 || Number(pointX.type) < Number(point.type)) ||
-      grid.allPointsY(point.y + 1).every((pointY) => pointY.x >= point.x + 1 || Number(pointY.type) < Number(point.type)) ||
-      grid.allPointsY(point.y + 1).every((pointY) => pointY.x <= point.x + 1 || Number(pointY.type) < Number(point.type))
+      grid
+        .allPointsX(point.x + 1)
+        .every((pointX) => pointX.y >= point.y + 1 || Number(pointX.type) < Number(point.type)) ||
+      grid
+        .allPointsX(point.x + 1)
+        .every((pointX) => pointX.y <= point.y + 1 || Number(pointX.type) < Number(point.type)) ||
+      grid
+        .allPointsY(point.y + 1)
+        .every((pointY) => pointY.x >= point.x + 1 || Number(pointY.type) < Number(point.type)) ||
+      grid
+        .allPointsY(point.y + 1)
+        .every((pointY) => pointY.x <= point.x + 1 || Number(pointY.type) < Number(point.type))
     );
   });
 
@@ -59,11 +73,43 @@ const task2 = () => {
   const best = grid.getAllNonEmpty().reduce(
     (best, point) => {
       const above =
-        point.y === grid.nRows - 1 ? 0 : countVisible(Number(point.type), grid, new Point(point.x, point.y + 1), new Point(point.x, grid.nRows - 1));
-      const below = point.y === 0 ? 0 : countVisible(Number(point.type), grid, new Point(point.x, 0), new Point(point.x, point.y - 1), true);
+        point.y === grid.nRows - 1
+          ? 0
+          : countVisible(
+              Number(point.type),
+              grid,
+              new Point(point.x, point.y + 1),
+              new Point(point.x, grid.nRows - 1)
+            );
+      const below =
+        point.y === 0
+          ? 0
+          : countVisible(
+              Number(point.type),
+              grid,
+              new Point(point.x, 0),
+              new Point(point.x, point.y - 1),
+              true
+            );
       const right =
-        point.x === grid.nColumns - 1 ? 0 : countVisible(Number(point.type), grid, new Point(point.x + 1, point.y), new Point(grid.nColumns - 1, point.y));
-      const left = point.x === 0 ? 0 : countVisible(Number(point.type), grid, new Point(0, point.y), new Point(point.x - 1, point.y), true);
+        point.x === grid.nColumns - 1
+          ? 0
+          : countVisible(
+              Number(point.type),
+              grid,
+              new Point(point.x + 1, point.y),
+              new Point(grid.nColumns - 1, point.y)
+            );
+      const left =
+        point.x === 0
+          ? 0
+          : countVisible(
+              Number(point.type),
+              grid,
+              new Point(0, point.y),
+              new Point(point.x - 1, point.y),
+              true
+            );
       const total = above * below * left * right;
       return best[1] <= total ? [point, total] : best;
     },
