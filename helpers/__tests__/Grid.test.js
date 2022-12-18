@@ -100,6 +100,45 @@ describe("Grid", () => {
       expect(grid.nTotalPoints).toBe(72);
     });
 
+    test("filters the grid with specified filter function", () => {
+      const points = grid.filter((point) => point.x > 2 && point.y < 1);
+      expect(points.length).toBe(6);
+      expect(points.every((p) => p.type === ".")).toBeTruthy();
+      expect(points.every((p) => p.x === 3)).toBeTruthy();
+      expect(points.some((p) => p.y === -5)).toBeTruthy();
+    });
+
+    test("filters the grid to return evey other point diagonally", () => {
+      let points = grid.filterOnLine(2, 2);
+      expect(points.length).toBe(4);
+      expect(points.some((p) => p.y === -5 && p.x === -5)).toBeTruthy();
+      expect(points.some((p) => p.y === -3 && p.x === -3)).toBeTruthy();
+      expect(points.some((p) => p.y === -4 && p.x === -4)).toBeFalsy();
+      points = grid.filterOnLine(1, 1, -3, -4);
+      expect(points.length).toBe(7);
+      expect(points.some((p) => p.y === -4 && p.x === -3)).toBeTruthy();
+      expect(points.some((p) => p.y === -3 && p.x === -2)).toBeTruthy();
+      expect(points.some((p) => p.y === -5 && p.x === -4)).toBeFalsy();
+      points = grid.filterOnLine(-1, 0, 0, 0);
+      expect(points.length).toBe(6);
+      expect(points[0].xy).toBe("0,0");
+      expect(points[5].xy).toBe("-5,0");
+      expect(points.some((p) => p.y === 1 && p.x === 0)).toBeFalsy();
+    });
+
+    test("filters the grid to return points in the specified area", () => {
+      let points = grid.filterInArea(1, 1, [-5, -5], [0, 0]);
+      expect(points.length).toBe(36);
+      expect(points[0].y === -5 && points[0].x === -5).toBeTruthy();
+      expect(points[35].y === 0 && points[35].x === 0).toBeTruthy();
+      expect(points.some((p) => p.y === 1 && p.x === 1)).toBeFalsy();
+      points = grid.filterInArea(-1, -1, [1, -4]);
+      expect(points.length).toBe(14);
+      expect(points[0].y === -4 && points[0].x === 1).toBeTruthy();
+      expect(points[13].y === -5 && points[13].x === -5).toBeTruthy();
+      expect(points.some((p) => p.y === 0 && p.x === 0)).toBeFalsy();
+    });
+
     test("returns sub-grid correctly", () => {
       grid = grid.toSubGrid(grid.pointAt(-2, -3));
       expect(grid.getAllNonEmpty().length).toBe(2);
@@ -136,6 +175,15 @@ describe("Grid", () => {
       expect(grid.nColumns).toBe(9);
       expect(grid.nRows).toBe(8);
       expect(grid.nTotalPoints).toBe(72);
+    });
+
+    test("returns true when grid is same", () => {
+      const copy = grid.copy();
+      expect(grid.same(copy)).toBe(true);
+      copy.setPointAt(0, 0, "change");
+      expect(grid.same(copy)).toBe(false);
+      expect(grid.same(grid.toSubGrid(grid.pointAt(-5, -5)))).toBe(true);
+      expect(grid.same(grid.toSubGrid(grid.pointAt(0, 0)))).toBe(false);
     });
   });
 });

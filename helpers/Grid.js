@@ -64,6 +64,15 @@ export class Grid {
     return grid;
   }
 
+  static createFromArrayOfRealPoints(points, emptyType = " ", nColumns = 0, nRows = 0) {
+    return Grid.createFromArrayOfPoints(
+      points.map((point) => [point.x, point.y, point.type, point instanceof EmptyPoint]),
+      emptyType,
+      nColumns,
+      nRows
+    );
+  }
+
   constructor(nColumns, nRows, emptyType = " ", offsetX = 0, offsetY = 0) {
     this._points = [];
     for (let column = 0; column < nColumns; column++) {
@@ -140,11 +149,13 @@ export class Grid {
    * Filter function: (point: Point, index, array: Point[]) => boolean
    */
   filter(fn) {
-    return this._points.filter(fn);
+    return this._points.flat().filter(fn);
   }
 
   /**
-   * Returns a list of filtered points by the input steps and starting positions.
+   * Returns a list of filtered points by the input steps and starting
+   * positions. Useful when you want points in a line returned.
+   *
    * Example:
    * filterByStep(2, -2, 6, 7)
    * This will start at point [6,7] and step +2 steps on the horizontal line, and -2 steps on the vertical line for
@@ -154,13 +165,21 @@ export class Grid {
    * Note that any of the starting positions can be omitted. The default starting point is [0,0].
    * A 5th argument can be provided to set if the starting point should be included or not (defaults to true).
    */
-  filterByStep(stepX, stepY, startX = 0, startY = 0, includeStart = true) {
+  filterOnLine(
+    stepX,
+    stepY,
+    startX = 0 - this.offsetX,
+    startY = 0 - this.offsetY,
+    includeStart = true,
+    includeEmpty = true
+  ) {
     const filteredPoints = [];
-    let x = startX,
-      y = startY;
+    let x = startX + this.offsetX,
+      y = startY + this.offsetY;
     while (true) {
       if (x !== startX || y !== startY || includeStart) {
-        filteredPoints.push(this._points[x][y]);
+        if (includeEmpty || !(this._points[x][y] instanceof EmptyPoint))
+          filteredPoints.push(this._points[x][y]);
       }
       x += stepX;
       y += stepY;
@@ -170,7 +189,10 @@ export class Grid {
   }
 
   /**
-   * Same as filterByStep, but this will step x and y individually, making it include every point covered by the steps.
+   * Same as filterByStep, but this will step x and y individually, making it
+   * include every point covered by the steps. Useful when you want points in an
+   * area returned.
+   *
    * For example:
    * filterByMultipleStep(1,1,[3,4])
    * This will return all points (like a sub-grid) starting at point [3,4] ending at point [maxX, maxY]
@@ -181,10 +203,10 @@ export class Grid {
    *
    * Note that the steps must be a positive or negative number, they cannot be 0.
    */
-  filterByMultipleStep(
+  filterInArea(
     stepX,
     stepY,
-    [startX, startY] = [0, 0],
+    [startX, startY] = [0 - this.offsetX, 0 - this.offsetY],
     [stopX, stopY] = [],
     includeStart = true
   ) {
@@ -192,23 +214,23 @@ export class Grid {
 
     const shouldContinueX = (x) => {
       if (stepX < 0) {
-        return x >= (stopX || 0);
+        return x >= (stopX + this.offsetX || 0);
       } else {
-        return x <= (stopX || this.nColumns - 1);
+        return x <= (stopX + this.offsetX || this.nColumns - 1);
       }
     };
     const shouldContinueY = (y) => {
       if (stepY < 0) {
-        return y >= (stopY || 0);
+        return y >= (stopY + this.offsetY || 0);
       } else {
-        return y <= (stopY || this.nRows - 1);
+        return y <= (stopY + this.offsetY || this.nRows - 1);
       }
     };
 
     const filteredPoints = [];
-    for (let x = startX; shouldContinueX(x); x += stepX) {
-      for (let y = startY; shouldContinueY(y); y += stepY) {
-        if (x === startX && y === startY && !includeStart) {
+    for (let x = startX + this.offsetX; shouldContinueX(x); x += stepX) {
+      for (let y = startY + this.offsetY; shouldContinueY(y); y += stepY) {
+        if (x === startX + this.offsetX && y === startY + this.offsetY && !includeStart) {
           continue;
         }
         filteredPoints.push(this._points[x][y]);
@@ -271,7 +293,7 @@ export class Grid {
   /**
    * Creates a sub-grid from the given points. Note that toPoint can be omitted, it will then be [maxX, maxY].
    */
-  toSubGrid(fromPoint, toPoint) {
+  toSubGrid(fromPoint, toPoint = null, keepXY = true) {
     const [maxX, maxY] = toPoint
       ? [toPoint.x + this._offsetX, toPoint.y + this._offsetY]
       : [this._points.length - 1, this._points[0].length - 1];
@@ -281,8 +303,8 @@ export class Grid {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         subGrid.push([
-          fromPoint.x + (x - minX),
-          fromPoint.y + (y - minY),
+          keepXY ? fromPoint.x + (x - minX) : x - minX,
+          keepXY ? fromPoint.y + (y - minY) : y - minY,
           this._points[x][y].type,
           this._points[x][y] instanceof EmptyPoint,
         ]);
@@ -300,6 +322,20 @@ export class Grid {
       point instanceof EmptyPoint
         ? new EmptyPoint(point2.x, point2.y, point.type)
         : new Point(point2.x, point2.y, point.type);
+  }
+
+  same(grid) {
+    if (this.nRows !== grid.nRows || this.nColumns !== grid.nColumns) return false;
+    if (this.offsetX !== grid.offsetX || this.offsetY !== grid.offsetY) return false;
+    for (let x = 0; x < this.nColumns; x++) {
+      for (let y = 0; y < this.nRows; y++) {
+        const thisPoint = this._points[x][y];
+        const otherPoint = grid.pointAt(x - this.offsetX, y - this.offsetY);
+        if (thisPoint.xy !== otherPoint.xy) return false;
+        if (thisPoint.type !== otherPoint.type) return false;
+      }
+    }
+    return true;
   }
 
   print(spacing = " ") {
