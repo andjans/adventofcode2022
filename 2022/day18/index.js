@@ -1,6 +1,7 @@
 import data from "./input.js";
 import testData from "./test.js";
 import "../../helpers/helpers.js";
+import { range } from "../../helpers/arrayUtils.js";
 
 const lines = data.split("\n");
 const testLines = testData.split("\n");
@@ -29,6 +30,9 @@ function countTotalSides(cubes) {
   return totSides;
 }
 
+/**
+ * MY SOLUTION - WORKS FOR THE TEST INPUT, BUT NOT REAL INPUT
+ */
 function countTotalSidesOuter(cubes) {
   let totSides = 0;
   cubes.forEach((cube) => {
@@ -43,6 +47,60 @@ function countTotalSidesOuter(cubes) {
   return totSides;
 }
 
+/**
+ * WORKING SOLUTION - COPIED FROM REDDIT SOLUTIONS THREAD
+ */
+function countOuter2(cubes) {
+  cubes = cubes.map(([x, y, z]) => [x + 1, y + 1, z + 1]);
+  const maxX = Math.max(...cubes.map((d) => d[0])) + 1;
+  const maxY = Math.max(...cubes.map((d) => d[1])) + 1;
+  const maxZ = Math.max(...cubes.map((d) => d[2])) + 1;
+  const map = range(maxX + 1).map(() =>
+    range(maxY + 1).map(() => range(maxZ + 1).map(() => false))
+  );
+  cubes.forEach(([x, y, z]) => {
+    map[x][y][z] = true;
+  });
+
+  let sides = 0;
+  const transforms = [
+    [-1, 0, 0],
+    [1, 0, 0],
+    [0, -1, 0],
+    [0, 1, 0],
+    [0, 0, -1],
+    [0, 0, 1],
+  ];
+  const seen = map.map((slice) => slice.map((row) => row.map(() => false)));
+
+  const toExpore = [[0, 0, 0]];
+  while (toExpore.length > 0) {
+    const [x, y, z] = toExpore.pop();
+    if (seen[x][y][z]) {
+      continue;
+    }
+
+    seen[x][y][z] = true;
+    for (const [dx, dy, dz] of transforms) {
+      const xp = x + dx;
+      const yp = y + dy;
+      const zp = z + dz;
+      if (xp < 0 || yp < 0 || zp < 0 || xp > maxX || yp > maxY || zp > maxZ) {
+        continue;
+      }
+
+      if (map[xp][yp][zp]) {
+        sides++;
+        continue;
+      }
+
+      toExpore.push([xp, yp, zp]);
+    }
+  }
+
+  return sides;
+}
+
 const task1 = () => {
   const cubes = lines.splitEachElementBy(",").map((el) => el.toNumber());
   let totSides = countTotalSides(cubes);
@@ -52,6 +110,8 @@ const task1 = () => {
 const task2 = () => {
   const cubes = lines.splitEachElementBy(",").map((el) => el.toNumber());
   let totSides = countTotalSidesOuter(cubes);
+  console.log(totSides);
+  totSides = countOuter2(cubes);
   console.log(totSides);
 };
 
