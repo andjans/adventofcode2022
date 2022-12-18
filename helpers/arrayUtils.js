@@ -187,6 +187,14 @@ Array.prototype.nonUnique = function () {
   return this.filter((value) => this.count(value) !== 1);
 };
 
+Array.prototype.shallowSame = function (other) {
+  return this.length === other.length && this.every((value, index) => value === other[index]);
+};
+
+Array.prototype.deepSame = function () {
+  // TODO
+};
+
 /**
  * Finds the max values in a double array. For example:
  * [[0,0],[0,4],[3,0],[1,1]]
@@ -203,4 +211,13 @@ Array.prototype.maxValues = function () {
  */
 Array.prototype.minValues = function () {
   return this.reduce((xy, curr) => [Math.min(xy[0], curr[0]), Math.min(xy[1], curr[1])], [0, 0]);
+};
+
+export const range = (n1, n2) => {
+  if (!n2) {
+    n2 = n1;
+    n1 = 0;
+  }
+
+  return Array.from(new Array(n2 - n1), (_, i) => i + n1);
 };
