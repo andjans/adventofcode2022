@@ -35,11 +35,10 @@ function countTotalSidesOuter(cubes) {
     const xValues = cubes.filter((c) => c[1] === cube[1] && c[2] === cube[2]).map((c) => c[0]);
     const yValues = cubes.filter((c) => c[0] === cube[0] && c[2] === cube[2]).map((c) => c[1]);
     const zValues = cubes.filter((c) => c[1] === cube[1] && c[0] === cube[0]).map((c) => c[2]);
-    const sides =
+    totSides +=
       [xValues.min(), xValues.max()].count(cube[0]) +
       [yValues.min(), yValues.max()].count(cube[1]) +
       [zValues.min(), zValues.max()].count(cube[2]);
-    totSides += sides;
   });
   return totSides;
 }
