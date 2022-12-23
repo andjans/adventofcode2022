@@ -154,7 +154,7 @@ const task1 = () => {
   const blueprints = testLines.map((b) => parse(b));
   console.log(
     blueprints.map((blueprint) => {
-      const result = maximizeGeodes(blueprint, 19);
+      const result = maximizeGeodes(blueprint, 24);
       console.log("Blueprint " + blueprint.id + ":" + result);
       return result;
     })
