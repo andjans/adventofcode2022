@@ -66,7 +66,7 @@ function maximizeGeodes(blueprint, rounds) {
     return costs;
   }, {});
 
-  function traverse(roundsLeft, inventory, storage) {
+  function traverse(roundsLeft, inventory, storage, skippedRobots = []) {
     const key =
       "" + roundsLeft + Object.values(inventory).join("") + Object.values(storage).join(""); // create a unique key for the subproblem
     if (memo[key]) {
@@ -82,7 +82,7 @@ function maximizeGeodes(blueprint, rounds) {
 
     // try buying each robot
     // Always buy geode if possible
-    if (canAffordRobot(geodeRobot, storage)) {
+    if (canAffordRobot(geodeRobot, storage) && roundsLeft > 1) {
       const newInventory = { ...inventory };
       let newStorage = { ...storage };
 
@@ -104,14 +104,19 @@ function maximizeGeodes(blueprint, rounds) {
       }
     } else {
       blueprint.robots.forEach((robot) => {
-        if (robot.type === geodeRobot.type) return;
-        const canAfford = canAffordRobot(robot, storage);
-        if (!canAfford) return;
+        if (
+          robot.type === geodeRobot.type ||
+          roundsLeft === 1 ||
+          skippedRobots.includes(robot.type) ||
+          !canAffordRobot(robot, storage)
+        ) {
+          return;
+        }
 
         const newInventory = { ...inventory };
         let newStorage = { ...storage };
 
-        // check if we have enough robots to produce the maximum number of resources
+        // check if we already have enough robots to produce the maximum number of resources
         const maxCost = maxCosts[robot.type];
         if (newInventory[robot.type] < maxCost) {
           // perform the produce phase for all robots in the inventory
@@ -133,10 +138,30 @@ function maximizeGeodes(blueprint, rounds) {
         }
       });
 
+      // If I have no clay or obsidian robots, and I can afford a clay or ore robot, there is no need to not buy a robot
+      if (
+        inventory.clay === 0 &&
+        inventory.obsidian === 0 &&
+        canAffordRobot(
+          blueprint.robots.find((r) => r.type === "clay"),
+          storage
+        ) &&
+        canAffordRobot(
+          blueprint.robots.find((r) => r.type === "ore"),
+          storage
+        )
+      ) {
+        memo[key] = maxGeodes;
+        return maxGeodes;
+      }
+
       // try not buying any robots
       let newStorage = { ...storage };
       newStorage = produceResources(inventory, newStorage);
-      const geodes = traverse(roundsLeft - 1, inventory, newStorage);
+      const newSkippedRobots = blueprint.robots
+        .filter((r) => canAffordRobot(r, storage))
+        .map((r) => r.type);
+      const geodes = traverse(roundsLeft - 1, inventory, newStorage, newSkippedRobots);
       if (geodes >= maxGeodes) {
         maxGeodes = geodes;
       }
@@ -147,24 +172,42 @@ function maximizeGeodes(blueprint, rounds) {
     return maxGeodes;
   }
 
-  return traverse(rounds, inventory, storage, maxCosts);
+  return traverse(rounds, inventory, storage);
 }
 
 const task1 = () => {
-  const blueprints = testLines.map((b) => parse(b));
+  const t1 = new Date().getTime();
+  const blueprints = lines.map((b) => parse(b));
   console.log(
-    blueprints.map((blueprint) => {
-      const result = maximizeGeodes(blueprint, 24);
-      console.log("Blueprint " + blueprint.id + ":" + result);
-      return result;
-    })
+    blueprints
+      .map((blueprint) => {
+        const result = maximizeGeodes(blueprint, 24);
+        console.log("Blueprint " + blueprint.id + ": " + result);
+        return result * blueprint.id;
+      })
+      .sum()
   );
+  console.log((new Date().getTime() - t1) / 1000);
 };
 
-const task2 = () => {};
+const task2 = () => {
+  const t1 = new Date().getTime();
+  const blueprints = lines.map((b) => parse(b));
+  console.log(
+    blueprints
+      .slice(0, 3)
+      .map((blueprint) => {
+        const result = maximizeGeodes(blueprint, 32);
+        console.log("Blueprint " + blueprint.id + ": " + result);
+        return result;
+      })
+      .product()
+  );
+  console.log((new Date().getTime() - t1) / 1000);
+};
 
 console.log("---- task 1 ----");
-task1();
+//task1();
 console.log("----------------");
 console.log("");
 console.log("---- task 2 ----");
