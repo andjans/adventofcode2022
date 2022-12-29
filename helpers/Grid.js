@@ -1,4 +1,4 @@
-import { Point, EmptyPoint } from "./Point.js";
+import { Point, EmptyPoint, directions, diagonalDirections } from "./Point.js";
 import "./arrayUtils.js";
 
 export class Grid {
@@ -120,6 +120,26 @@ export class Grid {
 
   allPointsY(y) {
     return this._points.transpose()[y + this._offsetY];
+  }
+
+  adjacentPoints(point, includeDiagonal = false) {
+    const adjacentDirections = includeDiagonal
+      ? [...directions, ...diagonalDirections]
+      : [...directions];
+    return adjacentDirections
+      .filter((dir) => {
+        const newX = point.x + dir[0];
+        const newY = point.y + dir[1];
+        return (
+          newX + this.offsetX >= 0 &&
+          newX + this.offsetX < this.nColumns &&
+          newY + this.offsetY >= 0 &&
+          newY + this.offsetY < this.nRows
+        );
+      })
+      .map((dir) => {
+        return this.pointAt(point.x + dir[0], point.y + dir[1]);
+      });
   }
 
   /**

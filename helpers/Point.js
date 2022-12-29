@@ -1,13 +1,13 @@
 export const P = (x, y, type) => new Point(x, y, type);
 
-const directions = [
+export const directions = [
   [1, 0],
   [-1, 0],
   [0, 1],
   [0, -1],
 ];
 
-const diagonalDirections = [
+export const diagonalDirections = [
   [1, 1],
   [-1, 1],
   [1, -1],
@@ -81,6 +81,10 @@ export class Point {
   }
 
   toString() {
+    if (Array.isArray(this._type)) {
+      if (this._type.length === 1) return this._type[0];
+      return this._type.length;
+    }
     return this._type;
   }
 }
