@@ -17,8 +17,6 @@ Number.prototype.toBinary = function () {
 };
 
 export const hexToDecimal = (hexString) => parseInt(hexString, 16);
-export const decimalToHex = (decimal) => decimal.toString(16);
 export const binaryToDecimal = (binaryString) => parseInt(binaryString, 2);
-export const decimalToBinary = (decimal) => decimal.toString(2);
-export const hexToBinary = (hexString) => decimalToBinary(hexToDecimal(hexString));
-export const binaryToHex = (binaryString) => decimalToHex(binaryToDecimal(binaryString));
+export const hexToBinary = (hexString) => hexToDecimal(hexString).toBinary();
+export const binaryToHex = (binaryString) => binaryToDecimal(binaryString).toHex();

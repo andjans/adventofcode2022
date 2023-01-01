@@ -43,7 +43,7 @@ String.prototype.hexToNumber = function () {
  */
 String.prototype.getNumbers = function () {
   // eslint-disable-next-line unicorn/no-unsafe-regex
-  return this.match(/[+-]?\d+(\.\d+)?/g);
+  return this.match(/[+-]?\d+(\.\d+)?/g).toNumber();
 };
 
 export const lowercaseLetters = [...new Array(26)].map((e, i) => String.fromCharCode(i + 97));
