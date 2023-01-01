@@ -1,12 +1,12 @@
 import data from "./input.js";
 import testData from "./test.js";
-import { djikstra } from "../../helpers/helpers.js";
+import "../../helpers/helpers.js";
 
 const lines = data.split("\n");
 const testLines = testData.split("\n");
 
 const task1 = () => {
-  const valves = testLines.reduce(
+  const valves = lines.reduce(
     (acc, line) => ({
       ...acc,
       [line.split(" ")[1]]: {
@@ -24,7 +24,6 @@ const task1 = () => {
   );
 
   let minutesLeft = 30;
-  const tot = 0;
   const state = {
     valves,
     position: "AA",
@@ -35,9 +34,9 @@ const task1 = () => {
   let states = [state];
 
   while (minutesLeft > 0) {
-    // Only keep top 20 states
-    states.sort((a, b) => a.totReleased - b.totReleased);
-    states = states.slice(0, 20);
+    // Only keep top 50 states
+    states.sort((a, b) => b.totReleased - a.totReleased);
+    states = states.slice(0, 450);
 
     const newStates = [];
     for (const currentState of states) {
@@ -45,7 +44,7 @@ const task1 = () => {
       const connections = currentValve.connections;
 
       // Release pressure
-      for (const valve of currentState.valves) {
+      for (const valve of Object.values(currentState.valves)) {
         if (valve.isOpen) {
           currentState.totReleased = currentState.totReleased + valve.rate;
         }
@@ -53,14 +52,14 @@ const task1 = () => {
 
       // Open valve
       if (!currentValve.isOpen && currentValve.rate > 0) {
-        const newValves = [...currentState.valves];
+        const newValves = { ...currentState.valves };
         newValves[currentState.position] = { ...currentValve, isOpen: true };
         newStates.push({
           valves: newValves,
           position: currentState.position,
           minute: currentState.minute - 1,
           totReleased: currentState.totReleased,
-          path: currentState.path,
+          path: [...currentState.path, currentState.position],
         });
       }
 
@@ -80,11 +79,12 @@ const task1 = () => {
     minutesLeft--;
   }
 
-  console.log(tot);
+  states.sort((a, b) => b.totReleased - a.totReleased);
+  console.log(states[0]);
 };
 
-const task1_DP = () => {
-  const valves = testLines.reduce(
+const task2 = () => {
+  const valves = lines.reduce(
     (acc, line) => ({
       ...acc,
       [line.split(" ")[1]]: {
@@ -101,63 +101,109 @@ const task1_DP = () => {
     {}
   );
 
-  const tot = 0;
+  let minutesLeft = 26;
   const state = {
     valves,
-    position: "AA",
+    positionA: "AA",
+    positionB: "AA",
     minute: 30,
     totReleased: 0,
-    path: ["AA"],
+    pathA: ["AA"],
+    pathB: ["AA"],
   };
-  const states = [state];
+  let states = [state];
 
-  while (states.length > 0) {
-    const currentState = states.shift();
-    const currentValve = currentState.valves[currentState.position];
-    const connections = currentValve.connections;
+  while (minutesLeft > 0) {
+    // Only keep top 50 states
+    states.sort((a, b) => b.totReleased - a.totReleased);
+    states = states.slice(0, 30850);
 
-    // Release pressure
-    for (const valve of currentState.valves) {
-      if (valve.isOpen) {
-        currentState.totReleased = currentState.totReleased + valve.rate;
+    const newStates2 = [];
+    for (const currentState of states) {
+      const newStates = [];
+
+      // Release pressure
+      for (const valve of Object.values(currentState.valves)) {
+        if (valve.isOpen) {
+          currentState.totReleased = currentState.totReleased + valve.rate;
+        }
+      }
+
+      // Position A
+      const currentValve = currentState.valves[currentState.positionA];
+      const connections = currentValve.connections;
+
+      // Open valve
+      if (!currentValve.isOpen && currentValve.rate > 0) {
+        const newValves = { ...currentState.valves };
+        newValves[currentState.positionA] = { ...currentValve, isOpen: true };
+        newStates.push({
+          valves: newValves,
+          positionA: currentState.positionA,
+          positionB: currentState.positionB,
+          minute: currentState.minute - 1,
+          totReleased: currentState.totReleased,
+          pathA: [...currentState.pathA, currentState.positionA],
+          pathB: currentState.pathB,
+        });
+      }
+
+      // Go to connections
+      for (const connection of connections) {
+        // Go to connection
+        newStates.push({
+          valves: currentState.valves,
+          positionA: connection,
+          positionB: currentState.positionB,
+          minute: currentState.minute - 1,
+          totReleased: currentState.totReleased,
+          pathA: [...currentState.pathA, connection],
+          pathB: currentState.pathB,
+        });
+      }
+
+      // Position B
+      for (const newState of newStates) {
+        const currentValve = newState.valves[newState.positionB];
+        const connections = currentValve.connections;
+
+        // Open valve
+        if (!currentValve.isOpen && currentValve.rate > 0) {
+          const newValves = { ...newState.valves };
+          newValves[newState.positionB] = { ...currentValve, isOpen: true };
+          newStates2.push({
+            valves: newValves,
+            positionA: newState.positionA,
+            positionB: newState.positionB,
+            minute: newState.minute,
+            totReleased: newState.totReleased,
+            pathA: newState.pathA,
+            pathB: [...newState.pathB, newState.positionB],
+          });
+        }
+
+        // Go to connections
+        for (const connection of connections) {
+          // Go to connection
+          newStates2.push({
+            valves: newState.valves,
+            positionA: newState.positionA,
+            positionB: connection,
+            minute: newState.minute,
+            totReleased: newState.totReleased,
+            pathA: newState.pathA,
+            pathB: [...newState.pathB, connection],
+          });
+        }
       }
     }
-
-    // Check if best
-    if (currentState.minute === 0) {
-      continue;
-    }
-
-    // Open valve
-    if (!currentValve.isOpen && currentValve.rate > 0) {
-      const newValves = [...currentState.valves];
-      newValves[currentState.position] = { ...currentValve, isOpen: true };
-      states.push({
-        valves: newValves,
-        position: currentState.position,
-        minute: currentState.minute - 1,
-        totReleased: currentState.totReleased,
-        path: currentState.path,
-      });
-    }
-
-    // Go to connections
-    for (const connection of connections) {
-      // Go to connection
-      states.push({
-        valves: currentState.valves,
-        position: connection,
-        minute: currentState.minute - 1,
-        totReleased: currentState.totReleased,
-        path: [...currentState.path, connection],
-      });
-    }
+    states = newStates2;
+    minutesLeft--;
   }
 
-  console.log(tot);
+  states.sort((a, b) => b.totReleased - a.totReleased);
+  console.log(states[0]);
 };
-
-const task2 = () => {};
 
 console.log("---- task 1 ----");
 task1();
